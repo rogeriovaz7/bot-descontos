@@ -12,10 +12,12 @@ let qrCodeBase64 = null;
 
 wppconnect.create({
   session: 'sessao-descontos',
-  logQR: false, // Desativa a impressão distorcida no terminal
-  catchQR: (base64Qrimg) => {
+  logQR: false,
+  autoClose: 0,
+  headless: true,
+  catchQR: (base64Qrimg, asciiQR, attempts) => {
     qrCodeBase64 = base64Qrimg;
-    console.log('✅ Novo QR Code gerado! Acede a /qr no navegador para ler.');
+    console.log(`[QR] Novo QR Code gerado (tentativa ${attempts})`);
   },
   statusFind: (statusSession) => {
     console.log('Status da Sessão:', statusSession);
@@ -23,8 +25,6 @@ wppconnect.create({
       qrCodeBase64 = null;
     }
   },
-  autoClose: 0,
-  headless: true,
   puppeteerOptions: {
     args: [
       '--no-sandbox',
@@ -33,13 +33,16 @@ wppconnect.create({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--single-process',
+      '--no-default-browser-check',
+      '--disable-features=site-per-process'
     ]
   }
 })
 .then(async (client) => {
     clientGlobal = client;
-    console.log('✅ WhatsApp ligado e pronto!');
+    console.log('✅ WhatsApp ligado e autenticado com sucesso!');
 
     try {
         const chats = await client.getAllChats();
@@ -56,25 +59,29 @@ wppconnect.create({
 })
 .catch((error) => console.log('Erro no WPPConnect:', error));
 
-// Endpoint para ver o QR Code limpo no navegador
+// Endpoint /qr com No-Cache explícito
 app.get('/qr', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    
     if (!qrCodeBase64) {
         if (clientGlobal) {
-            return res.send('<h2>O WhatsApp já está autenticado!</h2>');
+            return res.send('<h2 style="font-family:sans-serif; text-align:center; margin-top:50px; color:#2e7d32;">✅ WhatsApp autenticado e operacional!</h2>');
         }
-        return res.send('<h2>A gerar QR Code... Atualize em 5 segundos.</h2>');
+        return res.send('<h2 style="font-family:sans-serif; text-align:center; margin-top:50px;">⏳ A gerar QR Code... Atualize em alguns segundos.</h2>');
     }
 
     res.send(`
         <html>
-            <head><title>WhatsApp QR Code</title></head>
-            <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#f0f2f5;">
-                <h2>Digitalize com o WhatsApp</h2>
-                <div style="background:white; padding:20px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <img src="${qrCodeBase64}" alt="QR Code" style="width:280px; height:280px;" />
+            <head>
+                <title>WhatsApp QR Code</title>
+                <meta http-equiv="refresh" content="6">
+            </head>
+            <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#f0f2f5; margin:0;">
+                <h2 style="color:#111b21;">Digitalize com o WhatsApp</h2>
+                <div style="background:white; padding:20px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <img src="${qrCodeBase64}" alt="QR Code" style="width:280px; height:280px; display:block;" />
                 </div>
-                <p style="color:#666; margin-top:15px;">Atualiza automaticamente a cada 8 segundos.</p>
-                <script>setTimeout(() => location.reload(), 8000);</script>
+                <p style="color:#667781; margin-top:16px; font-size:14px;">A página atualiza automaticamente a cada 6 segundos.</p>
             </body>
         </html>
     `);
