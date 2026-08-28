@@ -1,7 +1,6 @@
-process.env.PUPPETEER_CACHE_DIR = require('path').join(__dirname, '.cache');
 const express = require('express');
 const wppconnect = require('@wppconnect-team/wppconnect');
-const puppeteer = require('puppeteer'); // Adicionado para obter o caminho do executável
+const puppeteer = require('puppeteer');
 
 const app = express();
 
@@ -10,48 +9,59 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 let clientGlobal = null;
 
-wppconnect.create({
-  session: 'sessao-descontos',
-  puppeteerOptions: {
-    executablePath: puppeteer.executablePath(), // Indica o caminho exato descarregado pelo Puppeteer
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  },
-  catchQR: (base64Qr, asciiQR) => {
-    console.log(asciiQR);
-  },
-  statusFind: (statusSession, session) => {
-    console.log('Status da Sessão:', statusSession);
-  }
-})
-.then(async (client) => {
-    clientGlobal = client;
-    console.log('✅ WhatsApp ligado e pronto a enviar!');
+async function startApp() {
+  console.log('⏳ A verificar/descarregar navegador Chrome...');
+  
+  // Força o download do Chromium no arranque caso não exista
+  const browserFetcher = puppeteer.createBrowserFetcher();
+  const revisionInfo = await browserFetcher.download('1095487'); // Versão estável Linux
 
-    try {
-        const chats = await client.getAllChats();
-        console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
-        chats.forEach(chat => {
-            if (chat.isGroup || chat.kind === 'newsletter') {
-                console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
-            }
-        });
-        console.log('--------------------------------\n');
-    } catch (e) {
-        console.log('Erro ao carregar lista de chats:', e);
+  console.log('✅ Navegador pronto em:', revisionInfo.executablePath);
+
+  wppconnect.create({
+    session: 'sessao-descontos',
+    puppeteerOptions: {
+      executablePath: revisionInfo.executablePath,
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
+    },
+    catchQR: (base64Qr, asciiQR) => {
+      console.log(asciiQR);
+    },
+    statusFind: (statusSession, session) => {
+      console.log('Status da Sessão:', statusSession);
     }
-})
-.catch((error) => console.log(error));
+  })
+  .then(async (client) => {
+      clientGlobal = client;
+      console.log('✅ WhatsApp ligado e pronto a enviar!');
 
-// Endpoint chamado pelo bot em Python
+      try {
+          const chats = await client.getAllChats();
+          console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
+          chats.forEach(chat => {
+              if (chat.isGroup || chat.kind === 'newsletter') {
+                  console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
+              }
+          });
+          console.log('--------------------------------\n');
+      } catch (e) {
+          console.log('Erro ao carregar lista de chats:', e);
+      }
+  })
+  .catch((error) => console.log(error));
+}
+
+startApp();
+
 app.post('/send-media', async (req, res) => {
     try {
         if (!clientGlobal) {
