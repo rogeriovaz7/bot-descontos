@@ -1,5 +1,6 @@
 const express = require('express');
 const wppconnect = require('@wppconnect-team/wppconnect');
+const puppeteer = require('puppeteer'); // Adicionado para obter o caminho do executável
 
 const app = express();
 
@@ -11,6 +12,7 @@ let clientGlobal = null;
 wppconnect.create({
   session: 'sessao-descontos',
   puppeteerOptions: {
+    executablePath: puppeteer.executablePath(), // Indica o caminho exato descarregado pelo Puppeteer
     headless: true,
     args: [
       '--no-sandbox',
