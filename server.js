@@ -8,21 +8,22 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const PORT = process.env.PORT || 10000;
 
 let clientGlobal = null;
-let qrCodeBase64 = null; // Guarda a imagem do QR Code em memória
+let qrCodeBase64 = null;
 
 wppconnect.create({
   session: 'sessao-descontos',
-  catchQR: (base64Qrimg, asciiQR, attempts, urlCode) => {
-    qrCodeBase64 = base64Qrimg; // Guarda a imagem base64
-    console.log(`[QR] Novo QR Code gerado (tentativa ${attempts})`);
+  logQR: false, // Desativa a impressão distorcida no terminal
+  catchQR: (base64Qrimg) => {
+    qrCodeBase64 = base64Qrimg;
+    console.log('✅ Novo QR Code gerado! Acede a /qr no navegador para ler.');
   },
-  statusFind: (statusSession, session) => {
+  statusFind: (statusSession) => {
     console.log('Status da Sessão:', statusSession);
     if (statusSession === 'isLogged' || statusSession === 'inChat') {
-      qrCodeBase64 = null; // Limpa o QR Code após o login
+      qrCodeBase64 = null;
     }
   },
-  autoClose: 0, // Desativa o fecho automático após 60 segundos
+  autoClose: 0,
   headless: true,
   puppeteerOptions: {
     args: [
@@ -55,23 +56,25 @@ wppconnect.create({
 })
 .catch((error) => console.log('Erro no WPPConnect:', error));
 
-// Endpoint para ver o QR Code diretamente no browser
+// Endpoint para ver o QR Code limpo no navegador
 app.get('/qr', (req, res) => {
     if (!qrCodeBase64) {
         if (clientGlobal) {
-            return res.send('<h3>O WhatsApp já está autenticado e ligado!</h3>');
+            return res.send('<h2>O WhatsApp já está autenticado!</h2>');
         }
-        return res.send('<h3>QR Code ainda a gerar... Atualize a página em instantes.</h3>');
+        return res.send('<h2>A gerar QR Code... Atualize em 5 segundos.</h2>');
     }
 
     res.send(`
         <html>
             <head><title>WhatsApp QR Code</title></head>
-            <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
-                <h2>Digitalize o QR Code com o WhatsApp</h2>
-                <img src="${qrCodeBase64}" alt="QR Code WhatsApp" style="width:300px; height:300px;" />
-                <p>A página atualiza automaticamente a cada 10 segundos.</p>
-                <script>setTimeout(() => location.reload(), 10000);</script>
+            <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#f0f2f5;">
+                <h2>Digitalize com o WhatsApp</h2>
+                <div style="background:white; padding:20px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <img src="${qrCodeBase64}" alt="QR Code" style="width:280px; height:280px;" />
+                </div>
+                <p style="color:#666; margin-top:15px;">Atualiza automaticamente a cada 8 segundos.</p>
+                <script>setTimeout(() => location.reload(), 8000);</script>
             </body>
         </html>
     `);
