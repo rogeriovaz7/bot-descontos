@@ -1,3 +1,4 @@
+process.env.PUPPETEER_CACHE_DIR = require('path').join(__dirname, '.cache');
 const express = require('express');
 const wppconnect = require('@wppconnect-team/wppconnect');
 const puppeteer = require('puppeteer'); // Adicionado para obter o caminho do executável

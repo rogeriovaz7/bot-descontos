@@ -1,17 +1,14 @@
 {
   "name": "bot_whatsapp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "postinstall": "puppeteer browsers install chrome"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@wppconnect-team/wppconnect": "^2.3.1",
-    "express": "^5.2.1"
+    "@wppconnect-team/wppconnect": "^1.35.0",
+    "express": "^4.21.2",
+    "puppeteer": "^24.1.1"
   }
 }
