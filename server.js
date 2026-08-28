@@ -44,22 +44,25 @@ wppconnect.create({
     clientGlobal = client;
     console.log('✅ WhatsApp ligado e autenticado com sucesso!');
 
-    try {
-        const chats = await client.getAllChats();
-        console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
-        chats.forEach(chat => {
-            if (chat.isGroup || chat.kind === 'newsletter') {
-                console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
-            }
-        });
-        console.log('--------------------------------\n');
-    } catch (e) {
-        console.log('Erro ao carregar chats:', e);
-    }
+    // Aguarda 5 segundos para a sincronização inicial terminar antes de listar os grupos
+    setTimeout(async () => {
+        try {
+            // Usa listChats() em vez do antigo getAllChats()
+            const chats = await client.listChats();
+            console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
+            chats.forEach(chat => {
+                if (chat.isGroup || chat.kind === 'newsletter') {
+                    console.log(`Nome: ${chat.name || chat.formattedTitle} | ID: ${chat.id._serialized}`);
+                }
+            });
+            console.log('--------------------------------\n');
+        } catch (e) {
+            console.log('Erro ao carregar chats:', e);
+        }
+    }, 5000);
 })
 .catch((error) => console.log('Erro no WPPConnect:', error));
 
-// Endpoint /qr com No-Cache explícito
 app.get('/qr', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     
@@ -67,7 +70,7 @@ app.get('/qr', (req, res) => {
         if (clientGlobal) {
             return res.send('<h2 style="font-family:sans-serif; text-align:center; margin-top:50px; color:#2e7d32;">✅ WhatsApp autenticado e operacional!</h2>');
         }
-        return res.send('<h2 style="font-family:sans-serif; text-align:center; margin-top:50px;">⏳ A gerar QR Code... Atualize em alguns segundos.</h2>');
+        return res.send('<h2 style="font-family:sans-serif; text-align:center; margin-top:50px;">⏳ A carregar sessão...</h2>');
     }
 
     res.send(`
