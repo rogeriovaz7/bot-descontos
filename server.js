@@ -9,30 +9,26 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 let clientGlobal = null;
 
 wppconnect.create({
-    session: 'sessao-descontos',
-    autoClose: 0,
-    timeAutoClose: 0,
-    headless: false,
-    qrTimeout: 0,
-    useChrome: false,
-    puppeteerOptions: {
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-        ]
-    },
-    catchQR: (base64Qr, asciiQR) => {
-        console.log(asciiQR);
-    },
-    statusFind: (statusSession, session) => {
-        console.log('Status da Sessão:', statusSession);
-    }
-}) // <- O parêntesis de fecho da função create estava em falta aqui!
+  session: 'sessao-descontos',
+  puppeteerOptions: {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu'
+    ]
+  },
+  catchQR: (base64Qr, asciiQR) => {
+    console.log(asciiQR);
+  },
+  statusFind: (statusSession, session) => {
+    console.log('Status da Sessão:', statusSession);
+  }
+})
 .then(async (client) => {
     clientGlobal = client;
     console.log('✅ WhatsApp ligado e pronto a enviar!');
