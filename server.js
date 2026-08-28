@@ -1,6 +1,5 @@
 const express = require('express');
 const wppconnect = require('@wppconnect-team/wppconnect');
-const puppeteer = require('puppeteer');
 
 const app = express();
 
@@ -9,58 +8,45 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 let clientGlobal = null;
 
-async function startApp() {
-  console.log('⏳ A verificar/descarregar navegador Chrome...');
-  
-  // Força o download do Chromium no arranque caso não exista
-  const browserFetcher = puppeteer.createBrowserFetcher();
-  const revisionInfo = await browserFetcher.download('1095487'); // Versão estável Linux
+wppconnect.create({
+  session: 'sessao-descontos',
+  puppeteerOptions: {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu'
+    ]
+  },
+  catchQR: (base64Qr, asciiQR) => {
+    console.log(asciiQR);
+  },
+  statusFind: (statusSession, session) => {
+    console.log('Status da Sessão:', statusSession);
+  }
+})
+.then(async (client) => {
+    clientGlobal = client;
+    console.log('✅ WhatsApp ligado e pronto a enviar!');
 
-  console.log('✅ Navegador pronto em:', revisionInfo.executablePath);
-
-  wppconnect.create({
-    session: 'sessao-descontos',
-    puppeteerOptions: {
-      executablePath: revisionInfo.executablePath,
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ]
-    },
-    catchQR: (base64Qr, asciiQR) => {
-      console.log(asciiQR);
-    },
-    statusFind: (statusSession, session) => {
-      console.log('Status da Sessão:', statusSession);
+    try {
+        const chats = await client.getAllChats();
+        console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
+        chats.forEach(chat => {
+            if (chat.isGroup || chat.kind === 'newsletter') {
+                console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
+            }
+        });
+        console.log('--------------------------------\n');
+    } catch (e) {
+        console.log('Erro ao carregar lista de chats:', e);
     }
-  })
-  .then(async (client) => {
-      clientGlobal = client;
-      console.log('✅ WhatsApp ligado e pronto a enviar!');
-
-      try {
-          const chats = await client.getAllChats();
-          console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
-          chats.forEach(chat => {
-              if (chat.isGroup || chat.kind === 'newsletter') {
-                  console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
-              }
-          });
-          console.log('--------------------------------\n');
-      } catch (e) {
-          console.log('Erro ao carregar lista de chats:', e);
-      }
-  })
-  .catch((error) => console.log(error));
-}
-
-startApp();
+})
+.catch((error) => console.log('Erro no WPPConnect:', error));
 
 app.post('/send-media', async (req, res) => {
     try {
