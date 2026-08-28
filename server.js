@@ -2,83 +2,99 @@ const express = require('express');
 const wppconnect = require('@wppconnect-team/wppconnect');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// Exemplo de uso da API WHATWG URL moderna para evitar DeprecationWarning
-function validarUrl(inputUrl) {
-  try {
-    return new URL(inputUrl);
-  } catch (err) {
-    return null;
-  }
-}
+let clientGlobal = null;
+let qrCodeBase64 = null; // Guarda a imagem do QR Code em memória
 
-let clientInstance = null;
-
-wppconnect
-  .create({
-    session: 'sessao-descontos',
-    catchQR: (base64Qr, asciiQR) => {
-      console.log('QR Code recebido');
-    },
-    statusFind: (statusSession, session) => {
-      console.log('Status da Sessão:', statusSession);
-    },
-    headless: true,
-    devtools: false,
-    useChrome: true,
-    debug: false,
-    logQR: true,
-    // Configurações do Puppeteer sem a flag descontinuada browserFetcher
-    puppeteerOptions: {
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ]
+wppconnect.create({
+  session: 'sessao-descontos',
+  catchQR: (base64Qrimg, asciiQR, attempts, urlCode) => {
+    qrCodeBase64 = base64Qrimg; // Guarda a imagem base64
+    console.log(`[QR] Novo QR Code gerado (tentativa ${attempts})`);
+  },
+  statusFind: (statusSession, session) => {
+    console.log('Status da Sessão:', statusSession);
+    if (statusSession === 'isLogged' || statusSession === 'inChat') {
+      qrCodeBase64 = null; // Limpa o QR Code após o login
     }
-  })
-  .then((client) => {
-    clientInstance = client;
-    start(client);
-  })
-  .catch((erro) => {
-    console.error('Erro ao iniciar WPPConnect:', erro);
-  });
-
-function start(client) {
-  client.onMessage((message) => {
-    // Lógica para tratar mensagens recebidas
-  });
-}
-
-app.get('/', (req, res) => {
-  res.send('API WhatsApp está online!');
-});
-
-app.post('/send-message', async (req, res) => {
-  const { phone, message } = req.body;
-
-  if (!clientInstance) {
-    return res.status(503).json({ error: 'Cliente WhatsApp ainda não inicializado' });
+  },
+  autoClose: 0, // Desativa o fecho automático após 60 segundos
+  headless: true,
+  puppeteerOptions: {
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu'
+    ]
   }
+})
+.then(async (client) => {
+    clientGlobal = client;
+    console.log('✅ WhatsApp ligado e pronto!');
 
-  try {
-    const chatId = phone.includes('@c.us') ? phone : `${phone}@c.us`;
-    await clientInstance.sendText(chatId, message);
-    return res.json({ status: 'sucesso', message: 'Mensagem enviada com sucesso' });
-  } catch (error) {
-    console.error('Erro ao enviar mensagem:', error);
-    return res.status(500).json({ error: 'Falha ao enviar mensagem' });
-  }
+    try {
+        const chats = await client.getAllChats();
+        console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
+        chats.forEach(chat => {
+            if (chat.isGroup || chat.kind === 'newsletter') {
+                console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
+            }
+        });
+        console.log('--------------------------------\n');
+    } catch (e) {
+        console.log('Erro ao carregar chats:', e);
+    }
+})
+.catch((error) => console.log('Erro no WPPConnect:', error));
+
+// Endpoint para ver o QR Code diretamente no browser
+app.get('/qr', (req, res) => {
+    if (!qrCodeBase64) {
+        if (clientGlobal) {
+            return res.send('<h3>O WhatsApp já está autenticado e ligado!</h3>');
+        }
+        return res.send('<h3>QR Code ainda a gerar... Atualize a página em instantes.</h3>');
+    }
+
+    res.send(`
+        <html>
+            <head><title>WhatsApp QR Code</title></head>
+            <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+                <h2>Digitalize o QR Code com o WhatsApp</h2>
+                <img src="${qrCodeBase64}" alt="QR Code WhatsApp" style="width:300px; height:300px;" />
+                <p>A página atualiza automaticamente a cada 10 segundos.</p>
+                <script>setTimeout(() => location.reload(), 10000);</script>
+            </body>
+        </html>
+    `);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 API WhatsApp a rodar na porta ${PORT}`);
+app.post('/send-media', async (req, res) => {
+    try {
+        if (!clientGlobal) {
+            return res.status(500).json({ error: 'WhatsApp ainda não está autenticado.' });
+        }
+
+        const { number, caption, path } = req.body;
+        if (!number || !path) {
+            return res.status(400).json({ error: 'Campos "number" e "path" são obrigatórios.' });
+        }
+
+        await clientGlobal.sendImage(number, path, 'banner.png', caption || '');
+        console.log(`[✓] Imagem enviada para: ${number}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro ao enviar imagem:', err);
+        res.status(500).json({ error: err.toString() });
+    }
 });
+
+app.listen(PORT, () => console.log(`🚀 API WhatsApp a rodar na porta ${PORT}`));
