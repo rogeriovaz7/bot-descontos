@@ -2,81 +2,83 @@ const express = require('express');
 const wppconnect = require('@wppconnect-team/wppconnect');
 
 const app = express();
+app.use(express.json());
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+const PORT = process.env.PORT || 3000;
 
-let clientGlobal = null;
-
-wppconnect.create({
-  session: 'sessao-descontos',
-  puppeteerOptions: {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  },
-  catchQR: (base64Qr, asciiQR) => {
-    console.log(asciiQR);
-  },
-  statusFind: (statusSession, session) => {
-    console.log('Status da Sessão:', statusSession);
+// Exemplo de uso da API WHATWG URL moderna para evitar DeprecationWarning
+function validarUrl(inputUrl) {
+  try {
+    return new URL(inputUrl);
+  } catch (err) {
+    return null;
   }
-})
-.then(async (client) => {
-    clientGlobal = client;
-    console.log('✅ WhatsApp ligado e pronto a enviar!');
+}
 
-    try {
-        const chats = await client.getAllChats();
-        console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
-        chats.forEach(chat => {
-            if (chat.isGroup || chat.kind === 'newsletter') {
-                console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
-            }
-        });
-        console.log('--------------------------------\n');
-    } catch (e) {
-        console.log('Erro ao carregar lista de chats:', e);
+let clientInstance = null;
+
+wppconnect
+  .create({
+    session: 'sessao-descontos',
+    catchQR: (base64Qr, asciiQR) => {
+      console.log('QR Code recebido');
+    },
+    statusFind: (statusSession, session) => {
+      console.log('Status da Sessão:', statusSession);
+    },
+    headless: true,
+    devtools: false,
+    useChrome: true,
+    debug: false,
+    logQR: true,
+    // Configurações do Puppeteer sem a flag descontinuada browserFetcher
+    puppeteerOptions: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
     }
-})
-.catch((error) => console.log('Erro no WPPConnect:', error));
+  })
+  .then((client) => {
+    clientInstance = client;
+    start(client);
+  })
+  .catch((erro) => {
+    console.error('Erro ao iniciar WPPConnect:', erro);
+  });
 
-app.post('/send-media', async (req, res) => {
-    try {
-        if (!clientGlobal) {
-            return res.status(500).json({ error: 'WhatsApp ainda não está autenticado.' });
-        }
+function start(client) {
+  client.onMessage((message) => {
+    // Lógica para tratar mensagens recebidas
+  });
+}
 
-        if (!req.body || Object.keys(req.body).length === 0) {
-            return res.status(400).json({ error: 'O corpo da requisição veio vazio.' });
-        }
-
-        const { number, caption, path } = req.body;
-
-        if (!number || !path) {
-            return res.status(400).json({ error: 'Campos "number" e "path" são obrigatórios.' });
-        }
-
-        await clientGlobal.sendImage(
-            number,
-            path,
-            'banner.png',
-            caption || ''
-        );
-
-        console.log(`[✓] Imagem enviada com sucesso para: ${number}`);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Erro ao enviar imagem:', err);
-        res.status(500).json({ error: err.toString() });
-    }
+app.get('/', (req, res) => {
+  res.send('API WhatsApp está online!');
 });
 
-app.listen(3000, () => console.log('🚀 API WhatsApp a rodar na porta 3000'));
+app.post('/send-message', async (req, res) => {
+  const { phone, message } = req.body;
+
+  if (!clientInstance) {
+    return res.status(503).json({ error: 'Cliente WhatsApp ainda não inicializado' });
+  }
+
+  try {
+    const chatId = phone.includes('@c.us') ? phone : `${phone}@c.us`;
+    await clientInstance.sendText(chatId, message);
+    return res.json({ status: 'sucesso', message: 'Mensagem enviada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao enviar mensagem:', error);
+    return res.status(500).json({ error: 'Falha ao enviar mensagem' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 API WhatsApp a rodar na porta ${PORT}`);
+});
