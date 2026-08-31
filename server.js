@@ -17,17 +17,19 @@ wppconnect
       qrCodeBase64 = base64Qrimg;
       console.log('>>> NOVO QR CODE GERADO - Aceda a /qr <<<');
     },
-    statusFind: (statusSession) => {
+    statusFind: (statusSession, session) => {
       console.log('Status da Sessao:', statusSession);
-      if (statusSession === 'isLogged' || statusSession === 'inChat') {
-        qrCodeBase64 = '';
+      if (statusSession === 'isLogged' || statusSession === 'inChat' || statusSession === 'qrReadSuccess') {
+        qrCodeBase64 = ''; // Limpa o QR Code ao conectar
       }
     },
-    headless: true,
+    headless: 'new', // Usa a nova engine headless do Chromium
     useChrome: false,
-    autoClose: 0,             // Impede o bot de fechar sozinho
-    waitForLogin: false,      // Evita o erro de timeout na autenticação
+    autoClose: 0,
+    waitForLogin: true,
+    protocolTimeout: 60000,
     puppeteerOptions: {
+      protocolTimeout: 60000,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -36,10 +38,18 @@ wppconnect
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
+        '--single-process', // Importante no ecossistema Render
         '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
       ]
     }
   })
+  .then((client) => {
+    clientGlobal = client;
+    console.log('>>> WHATSAPP CONECTADO E PRONTO COM SUCESSO! <<<');
+  })
+  .catch((error) => {
+    console.error('Erro ao conectar WPPConnect:', error);
+  });
 .then((client) => {
     clientGlobal = client;
     console.log('✅ WhatsApp ligado e pronto no Render!');
