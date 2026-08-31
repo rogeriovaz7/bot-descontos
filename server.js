@@ -10,34 +10,36 @@ const PORT = process.env.PORT || 10000;
 let clientGlobal = null;
 let qrCodeBase64 = null;
 
-wppconnect.create({
-  session: 'sessao-descontos',
-  logQR: false,
-  autoClose: 0,
-  headless: true,
-  catchQR: (base64Qrimg) => {
-    qrCodeBase64 = base64Qrimg;
-  },
-  statusFind: (statusSession) => {
-    if (statusSession === 'isLogged' || statusSession === 'inChat') {
-      qrCodeBase64 = null;
+wppconnect
+  .create({
+    session: 'sessao-descontos',
+    catchQR: (base64Qrimg) => {
+      qrCodeBase64 = base64Qrimg;
+      console.log('>>> NOVO QR CODE GERADO - Aceda a /qr <<<');
+    },
+    statusFind: (statusSession) => {
+      console.log('Status da Sessao:', statusSession);
+      if (statusSession === 'isLogged' || statusSession === 'inChat') {
+        qrCodeBase64 = '';
+      }
+    },
+    headless: true,
+    useChrome: false,
+    autoClose: 0,             // Impede o bot de fechar sozinho
+    waitForLogin: false,      // Evita o erro de timeout na autenticação
+    puppeteerOptions: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+      ]
     }
-  },
-  puppeteerOptions: {
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu',
-      '--single-process',
-      '--no-default-browser-check',
-      '--disable-features=site-per-process'
-    ]
-  }
-})
+  })
 .then((client) => {
     clientGlobal = client;
     console.log('✅ WhatsApp ligado e pronto no Render!');
