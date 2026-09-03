@@ -17,9 +17,10 @@ wppconnect.create({
     timeAutoClose: 0,
     headless: true,
     qrTimeout: 0,
-    useChrome: false,
+    useChrome: true,
     protocolTimeout: 120000,
     puppeteerOptions: {
+        executablePath: '/usr/bin/chromium-browser', // ou let Puppeteer find system chromium
         protocolTimeout: 120000,
         args: [
             '--no-sandbox',
@@ -34,7 +35,6 @@ wppconnect.create({
     catchQR: (base64Qr, asciiQR) => console.log(asciiQR),
     statusFind: (statusSession, session) => console.log('Status da Sessão:', statusSession)
 })
-
 
 app.post('/send-media', async (req, res) => {
     try {
