@@ -10,16 +10,16 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 let clientGlobal = null;
 
+
 wppconnect.create({
     session: 'sessao-descontos',
     autoClose: 0,
     timeAutoClose: 0,
-    headless: true, // No Render tem de obrigatoriamente estar a true
+    headless: true,
     qrTimeout: 0,
     useChrome: false,
     protocolTimeout: 120000,
     puppeteerOptions: {
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
         protocolTimeout: 120000,
         args: [
             '--no-sandbox',
