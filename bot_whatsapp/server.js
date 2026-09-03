@@ -14,11 +14,12 @@ wppconnect.create({
     session: 'sessao-descontos',
     autoClose: 0,
     timeAutoClose: 0,
-    headless: false,
+    headless: true, // No Render tem de obrigatoriamente estar a true
     qrTimeout: 0,
     useChrome: false,
     protocolTimeout: 120000,
     puppeteerOptions: {
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
         protocolTimeout: 120000,
         args: [
             '--no-sandbox',
@@ -33,24 +34,6 @@ wppconnect.create({
     catchQR: (base64Qr, asciiQR) => console.log(asciiQR),
     statusFind: (statusSession, session) => console.log('Status da Sessão:', statusSession)
 })
-.then(async (client) => {
-    clientGlobal = client;
-    console.log('✅ WhatsApp ligado e pronto a enviar!');
-
-    try {
-        const chats = await client.listChats();
-        console.log('\n--- LISTA DE GRUPOS E CANAIS ---');
-        chats.forEach(chat => {
-            if (chat.isGroup || chat.kind === 'newsletter') {
-                console.log(`Nome: ${chat.name} | ID: ${chat.id._serialized}`);
-            }
-        });
-        console.log('--------------------------------\n');
-    } catch (e) {
-        console.log('Erro ao carregar lista de chats:', e);
-    }
-})
-.catch((error) => console.log('Erro na criação do WPPConnect:', error));
 
 
 app.post('/send-media', async (req, res) => {
