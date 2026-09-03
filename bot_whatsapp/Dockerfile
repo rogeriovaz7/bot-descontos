@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
     libgbm1 \
     libpango-1.0-0 \
     libcairo2 \
-    alsa-lib \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
