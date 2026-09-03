@@ -23,7 +23,7 @@ TEMPLATES = [
 MINHA_TAG_AMAZON = "zav0f-20"
 
 # Configuração do WhatsApp
-WHATSAPP_API_URL = "http://localhost:3000/send-media"
+WHATSAPP_API_URL = "https://bot-whatsapp-docker.onrender.com/send-media"
 WHATSAPP_CANAL_ID = "120363424620479144@g.us"
 
 
