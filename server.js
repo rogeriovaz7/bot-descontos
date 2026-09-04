@@ -56,28 +56,25 @@ wppconnect
     autoClose: 0,
     waitForLogin: true,
     protocolTimeout: 60000,
-    puppeteerOptions: {
-      protocolTimeout: 60000,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--single-process',
-        '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
-      ]
-    }
-  })
-  .then((client) => {
-    clientGlobal = client;
-    console.log('>>> WHATSAPP CONECTADO E PRONTO COM SUCESSO! <<<');
-  })
-  .catch((error) => {
-    console.error('Erro ao conectar WPPConnect:', error);
-  });
+
+        puppeteerOptions: {
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (process.platform === 'win32' ? undefined : '/usr/bin/chromium'),
+        protocolTimeout: 120000,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--single-process', // Ajuda a reduzir o consumo de memória em ambientes restritos (pode testar se estabiliza)
+            '--disable-software-rasterizer',
+            '--disable-extensions'
+        ]
+    },
+
+    
 
 // Rota de envio
 app.post('/send-media', async (req, res) => {
