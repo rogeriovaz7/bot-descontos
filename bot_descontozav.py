@@ -19,8 +19,19 @@ TEMPLATES = [
     "template1.png",
     "template2.png",
     "template3.png"
-]
-MINHA_TAG_AMAZON = "zav0f-20"
+    "template4.png",
+    "template5.png",
+    "template6.png"
+     "template7.png",
+    "template8.png",
+    "template10.png"
+    "template11.png",
+    "template12.png",
+    "template13.png"
+    "template14.png"
+    "template15.png"
+    
+MINHA_TAG_AMAZON = "zav0b-21"
 
 # Configuração do WhatsApp
 WHATSAPP_API_URL = "https://bot-whatsapp-docker.onrender.com/send-media"
